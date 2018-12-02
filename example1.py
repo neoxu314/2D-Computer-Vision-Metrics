@@ -1,5 +1,5 @@
 import cv2
-from lib import CV_evaluation as cve
+from lib import object_detection_evaluation as cve
 from lib import BoundingBox as bb
 from lib import utils
 

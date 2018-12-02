@@ -1,17 +1,14 @@
-import cv2
-from lib import utils
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 def get_iou_from_2_bbs(bb1, bb2):
-    """ Get the IoU score from two input bounding boxes
+    """ Get the IoU score from two input bounding boxes.
 
     Args:
-        bb1: The bounding box 1 which is a list contain the (x,y) coordinates of the upper-left corner and the
-        lower-right corner of this bounding box in order.
-        bb2: The bounding box 2 which data structure is same with the bb1.
+        bb1: A BoundingBox object for one of the input bounding boxes.
+        bb2: Another BoundingBox object for another input bounding box.
 
     Returns:
         iou: The IoU score of the given two bounding boxes.
@@ -43,17 +40,17 @@ def eval_predicted_bb_list(gt_bb_list, pr_bb_list, iou_threshold = 0.3):
     ground-truth bounding box, it is a TP, otherwise, it is a FP.
 
     Args:
-        gt_bb_list: The list for all the ground truth bounding boxes.
-        pr_bb_list: The list for all the corresponding predicted bounding boxes of gt_bbs
+        gt_bb_list: A list of BoundingBox objects for all the ground truth bounding boxes.
+        pr_bb_list: A list of BoundingBox objects for all the corresponding predicted bounding boxes of gt_bbs
         iou_threshold: If a prediction bounding box is overlapping over multiple ground-truth bounding boxes, the
         selected corresponding ground truth bounding box is the one which has the largest IoU (greater than IoU
         threshold) with the predicted bounding box.
 
     Returns:
-        evaluated_predicted_bb_dict_list: A sorted dictionary list of all the input predicted bounding boxes, whose each item
-        contains a predicted bounding box and a corresponding TP flag. If TP is True, the corresponding predicted
-        bounding box is a TP; otherwise, it is a FP. The list is sorted by the decreasing order of the prediction
-        confidence of each predicted bounding box.
+        evaluated_predicted_bb_dict_list: A sorted dictionary list of all the input predicted bounding boxes, whose each
+        item contains a BoundingBox object for a predicted bounding box and a corresponding TP flag. If TP is True,
+        the corresponding predicted bounding box is a TP; otherwise, it is a FP. The list is sorted by the decreasing
+        order of the prediction confidence of each predicted bounding box.
     """
     evaluated_predicted_bb_dict_list = []
 
@@ -135,12 +132,14 @@ def draw_precision_recall_curve(evaluated_predicted_bb_dict_list, ground_truth_b
     list.
 
     Args:
-        evaluated_predicted_bb_dict_list:
+        evaluated_predicted_bb_dict_list: A dictionary list of evaluated predicted bounding boxes. Each item contains a
+        BoundingBox object for a predicted bounding box and a TP flag (True for TP, False for FP).
         ground_truth_bounding_box_num:
-        plot:
+        plot: A flag for determining whether this function plotting the precision-recall curve.
 
     Returns:
-        acc_precision_recall_dict_list:
+        acc_precision_recall_dict_list: The dictionary list whose each item contains a pair of precision and recall
+        values.
     """
     acc_precision_recall_dict_list = []
 
@@ -181,9 +180,18 @@ def draw_precision_recall_curve(evaluated_predicted_bb_dict_list, ground_truth_b
 
 
 def get_ap_by_11_points_interpolation(acc_precision_recall_dict_list):
-    """The core of the 11-points-interpolation method of PASCAL VOC
+    """The core of the 11-points-interpolation method of PASCAL VOC is that in the precision-recall curve, choose 11
+    equally spaced recall levels [0, 0.1, 0.2, ..., 1]. For each recall level r_i, find the corresponding maximum
+    precision. The corresponding largest precision at each recall level r_i is got by finding the maximum precision
+    value in the precision-recall curve in the range of [r_i, 1]. Once all the 11 maximum precision values are found,
+    the AP can be got by calculating the mean of these values.
 
-    :return:
+    Args:
+        acc_precision_recall_dict_list: The input dictionary list whose each item is a pair of precision and recall.
+        values. The list must be sorted by the increasing order of recall value.
+
+    Returns:
+        ap: The AP calculated by using 11-points-interpolation method of PASCAL VOC.
     """
     # Sort the acc_precision_recall_list
     sorted_acc_precision_recall_dict_list = sorted(acc_precision_recall_dict_list, key=lambda item: item['recall'])
@@ -202,8 +210,8 @@ def get_ap_by_11_points_interpolation(acc_precision_recall_dict_list):
         else:
             precision_max_list.append(0)
 
-    mAP = np.mean(precision_max_list)
-    return mAP
+    ap = np.mean(precision_max_list)
+    return ap
 
 
 def get_ap_by_all_points_interpolation(acc_precision_recall_dict_list):
@@ -215,10 +223,11 @@ def get_ap_by_all_points_interpolation(acc_precision_recall_dict_list):
     (It is better to use an graphical precision-recall curve to understand this algorithm.)
 
     Args:
-        acc_precision_recall_dict_list:
+        acc_precision_recall_dict_list: The input dictionary list whose each item is a pair of precision and recall.
+        values. The list must be sorted by the increasing order of recall value.
 
     Returns:
-        mAP
+        ap: The AP calculated by using all-points-interpolation method of PASCAL VOC.
     """
     # Sort the accumulated accuracy-precision list by the increasing order of recall
     sorted_acc_precision_recall_dict_list = sorted(acc_precision_recall_dict_list, key=lambda item: item['recall'])
@@ -286,8 +295,8 @@ def get_ap_by_all_points_interpolation(acc_precision_recall_dict_list):
     #     print(vertex)
 
     # Computing the mAP
-    mAP = 0
+    ap = 0
     for i in range(len(vertex_list) - 1):
-        mAP += (vertex_list[i+1]['recall'] - vertex_list[i]['recall']) * vertex_list[i+1]['precision']
+        ap += (vertex_list[i+1]['recall'] - vertex_list[i]['recall']) * vertex_list[i+1]['precision']
 
-    return mAP
+    return ap

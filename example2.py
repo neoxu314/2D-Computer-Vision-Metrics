@@ -1,17 +1,22 @@
+'''
+An example for using BoundingBox class, plotting precision-recall curve, plotting BoundingBox objects on images, and
+computing PASCAL-VOC-style mAP (11-points-interpolation method and all-points-interpolation method).
+'''
+
 import cv2
 import os
-from lib import CV_evaluation as cve
+from lib import object_detection_evaluation as ode
 from lib import BoundingBox as bb
+import numpy as np
 from lib import utils
-import matplotlib.pyplot as plt
 
 
 CV2_FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
-####################
-# Prepare for data #
-####################
+################################################################
+# Prepare for data (An example for using the BoundingBox class)#
+################################################################
 DATA_DIR = 'data/'
 
 # Three images used for evaluation
@@ -40,7 +45,8 @@ pr_bb_list.append(img2_pr_bb1)
 # Define the ground truth bounding box and the predicted bounding box for img3
 img3 = cv2.imread('data/003.jpg')
 img3_height, img3_width = img3.shape[:2]
-img3_gt_bb1 = bb.BoundingBox(class_id='object', img_path='data/003.jpg', x1=26, y1=23, x2=317, y2=img3_height-1, bb_type='gt')
+img3_gt_bb1 = bb.BoundingBox(class_id='object', img_path='data/003.jpg', x1=26, y1=23, x2=317, y2=img3_height-1,
+                             bb_type='gt')
 img3_gt_bb2 = bb.BoundingBox(class_id='object', img_path='data/003.jpg', x1=258, y1=0, x2=575, y2=396, bb_type='gt')
 img3_pr_bb1 = bb.BoundingBox(class_id='object', img_path='data/003.jpg', x1=10, y1=10, x2=210, y2=310, bb_type='pr', \
                            prediction_confidence=0.70)
@@ -77,43 +83,37 @@ pr_bb_list.append(img5_pr_bb1)
 pr_bb_list.append(img5_pr_bb2)
 
 
-###########################
-# Test evaluation methods #
-###########################
+###################################################################################################################
+# Test evaluation methods (plot precision-recall curve, compute mAP by the 11-points-interpolation method and the #
+# all-points-interpolation method of the PASCAL VOC)                                                              #
+###################################################################################################################
 # Get the dictionary list for evaluated predicted bounding boxes, whose item contains a predicted bounding box and a
-# pr_bb_dict_list = cve.eval_predicted_bb_list(gt_bb_list, pr_bb_list)
-# class_id_list = list(set([bb_dict['bb'].get_class_id() for bb_dict in pr_bb_dict_list]))
-# for class_id in class_id_list:
-#     class_pr_bb_dict_list = \
-#         [pr_bb_dict for pr_bb_dict in pr_bb_dict_list if pr_bb_dict['bb'].get_class_id() == class_id]
-#     class_gt_bb_list = [gt_bb for gt_bb in gt_bb_list if gt_bb.get_class_id() == class_id]
-#     acc_precision_recall_dict_list = \
-#         cve.draw_precision_recall_curve(class_pr_bb_dict_list, len(class_gt_bb_list), plot=True)
-#     cve.get_ap_by_11_points_interpolation(acc_precision_recall_dict_list)
+pr_bb_dict_list = ode.eval_predicted_bb_list(gt_bb_list, pr_bb_list)
+class_id_list = list(set([bb_dict['bb'].get_class_id() for bb_dict in pr_bb_dict_list]))
+ap_by_11_points_list = []
+ap_by_all_points_list = []
+
+for class_id in class_id_list:
+    class_pr_bb_dict_list = \
+        [pr_bb_dict for pr_bb_dict in pr_bb_dict_list if pr_bb_dict['bb'].get_class_id() == class_id]
+    class_gt_bb_list = [gt_bb for gt_bb in gt_bb_list if gt_bb.get_class_id() == class_id]
+    acc_precision_recall_dict_list = \
+        ode.draw_precision_recall_curve(class_pr_bb_dict_list, len(class_gt_bb_list), plot=True)
+    ap_by_11_points = ode.get_ap_by_11_points_interpolation(acc_precision_recall_dict_list)
+    ap_by_11_points_list.append(ap_by_11_points)
+    ap_by_all_points = ode.get_ap_by_all_points_interpolation(acc_precision_recall_dict_list)
+    ap_by_all_points_list.append(ap_by_all_points)
+
+map_by_11_points = np.mean(ap_by_11_points_list)
+map_by_all_points = np.mean(ap_by_all_points_list)
+
+print('The mAP calculated by the 11-points-interpolation method of PASCAL VOC is: ', map_by_11_points)
+print('The mAP calculated by the 11-points-interpolation method of PASCAL VOC is: ', map_by_all_points)
 
 
-
-precision_list = [1, 0.5, 0.6666, 0.5, 0.4, 0.3333, 0.2857, 0.25, 0.2222, 0.3, 0.2727, 0.3333, 0.3846, 0.4285, 0.4,
-                  0.375, 0.3529, 0.3333, 0.3157, 0.3, 0.2857, 0.2727, 0.3043, 0.2916]
-recall_list = [0.0666, 0.0666, 0.1333, 0.1333, 0.1333, 0.1333, 0.1333, 0.1333, 0.1333, 0.2, 0.2, 0.2666, 0.3333, 0.4,
-               0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4666, 0.4666]
-# plt.plot(recall_list, precision_list)
-# plt.show()
-
-acc_precision_recall_dict_list = []
-for i in range(len(precision_list)):
-    item = {
-        'precision': precision_list[i],
-        'recall': recall_list[i]
-    }
-    acc_precision_recall_dict_list.append(item)
-
-# ap = cve.get_ap_by_11_points_interpolation(acc_precision_recall_dict_list)
-cve.get_ap_by_all_points_interpolation(acc_precision_recall_dict_list)
-# print(ap)
-
-
-# Visualize all the images with corresponding bbs
+############################################################
+# An example for Visualizing images with corresponding bbs #
+############################################################
 # for img_path in img_path_list:
 #     img_gt_bb_list = [gt_bb for gt_bb in gt_bb_list if gt_bb.get_img_path() == img_path]
 #     # img_pr_bb_list = [pr_bb for pr_bb in pr_bb_list if pr_bb.get_img_path() == img_path]
@@ -127,11 +127,6 @@ cve.get_ap_by_all_points_interpolation(acc_precision_recall_dict_list)
 #         cv2.putText(img_with_bbs, str(img_pr_bb_dict['TP']), upper_left_corner, CV2_FONT, 0.5, \
 #                     (0, 0, 0), 1, cv2.LINE_AA)
 #     cv2.imshow(img_path, img_with_bbs)
-
-
-
-
-
 
 
 cv2.waitKey(0)
