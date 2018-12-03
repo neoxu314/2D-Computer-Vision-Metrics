@@ -1,3 +1,6 @@
+'''
+This is the example for using BoundingBox class and computing the IoU between two bounding boxes.
+'''
 import cv2
 from lib import object_detection_evaluation as cve
 from lib import BoundingBox as bb
