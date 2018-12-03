@@ -10,5 +10,5 @@ Detection and **compute the IoU between two bounding boxes**.
 PASCAL-VOC-style mAP** (11-points-interpolation method and all-points-interpolation method).
 3. *example3.py* shows how to **compute the IoU between two masks**.
 
-All the functions and classes are stored in the *lib* folder.
+All the functions and classes are stored in the *./lib* folder.
 
